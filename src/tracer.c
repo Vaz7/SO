@@ -24,16 +24,17 @@ void c_exec(char* cmd){
 	gettimeofday(&curT, NULL);
 
 	if((pid = fork()) == 0){
+		printf("Child process ID: %d\n", getpid()); // Print child process ID
+		
 		int ret = execvp(array[0], array);
 
 		perror("Failed to execute command!\n");
-		_exit(ret);
+		_exit(pid);
 	} else {
 		int pipe[2];
 		//TODO Use named pipes to send to server pid, array[0] and
 		//curT.tv_sec 
 		//handel closing of pipe writing to server
-
 		wait(NULL);
 
 		gettimeofday(&curT, NULL);
