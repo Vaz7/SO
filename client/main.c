@@ -12,7 +12,7 @@ void c_exec(char* cmd){
 
 	char* in_ptr = cmd;
 	char* o_ptr=NULL;
-	char* array[20];
+	char* array[20];//o tamanho deste array é kinda sus
 	int index = 0;
 
 	//nao tinhas inicializado o o_ptr a NULL, assim tinha UB, como pus corre sempre pelo menos 1x
@@ -24,7 +24,6 @@ void c_exec(char* cmd){
 	gettimeofday(&curT, NULL);
 
 	if((pid = fork()) == 0){
-		printf("%s\n",array[0]);
 		int ret = execvp(array[0], array);
 
 		perror("Failed to execute command!\n");
