@@ -5,11 +5,13 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <string.h>
+#include <errno.h>
 
 void c_exec(char* cmd){
 	int pid;
 	struct timeval curT;
 
+	char *nome = strdup(cmd);
 	char* in_ptr = cmd;
 	char* o_ptr=NULL;
 	char* array[20];//o tamanho deste array é kinda sus
@@ -21,23 +23,36 @@ void c_exec(char* cmd){
 		array[index++] = o_ptr;
 	}
 
+
+	int fd = open("stats", O_WRONLY);
+	if(fd == -1){
+		perror("Failed to open FIFO\n");
+	}
+
 	gettimeofday(&curT, NULL);
 
 	if((pid = fork()) == 0){
+		pid_t pidfilho = getpid();
+
+		write(fd, &pidfilho, sizeof(pid_t));
+		write(fd,nome,sizeof(char)*strlen(nome));
+		write(fd,&curT,sizeof(struct timeval)); // writes para passar para o servidor a info
+		
 		printf("Child process ID: %d\n", getpid()); // Print child process ID
 		
 		int ret = execvp(array[0], array);
 
 		perror("Failed to execute command!\n");
-		_exit(pid);
+		_exit(-1);// só da exit se falhar, por isso deve dar de -1
 	} else {
-		int pipe[2];
 		//TODO Use named pipes to send to server pid, array[0] and
 		//curT.tv_sec 
 		//handel closing of pipe writing to server
 		wait(NULL);
 
 		gettimeofday(&curT, NULL);
+
+		write(fd,&curT,sizeof(struct timeval));
 
 		//Open named pipe to write to server
 		//write pid and curT
@@ -77,6 +92,13 @@ int main(int argc, char **argv){
 		printf("Invalid Input");
 		return 0;
 	}
+
+	if(mkfifo("stats", 0777) == -1){
+        if(errno != EEXIST){
+            printf("Could not create fifo file\n"); //verifica se o fifo foi criado/já estava criado, se der erro nao prossegue
+            return 1;
+        }
+    }
 	
 	if(!strcmp(argv[1], "execute") && argc == 4){
 		if(strcmp(argv[2], "-u") == 0){
