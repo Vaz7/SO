@@ -15,7 +15,7 @@ void c_exec(char* cmd){
 	char* array[20];//o tamanho deste array é kinda sus
 	int index = 0;
 
-	//nao tinhas inicializado o o_ptr a NULL, assim tinha UB, como pus corre sempre pelo menos 1x
+	
 	while(o_ptr != NULL || index==0){
 		o_ptr = strsep(&in_ptr, " ");
 		array[index++] = o_ptr;
@@ -45,6 +45,25 @@ void c_exec(char* cmd){
 	}
 }
 
+void p_exec(char *cmd){
+	char* in_ptr = cmd;
+	char* o_ptr=NULL;
+	char* array[20];//o tamanho deste array é kinda sus
+	int index = 0;
+
+	
+	while(o_ptr != NULL || index==0){
+		o_ptr = strsep(&in_ptr, " ");
+		array[index++] = o_ptr;
+	}
+
+
+	for(int i=0;i<index-1;i++){
+		printf("%s\n",array[i]);
+	}
+	//fazer cenas 
+}
+
 void c_status(){
 	int pipe[2];
 
@@ -65,12 +84,17 @@ int main(int argc, char **argv){
 			c_exec(argv[3]);
 		}
 			
-		//else if(strcmp(argv[2], "-p") == 0)
-			//TODO
+		else if(strcmp(argv[2], "-p") == 0){
+
+			p_exec(argv[3]);
+		}
+
+		else printf("Invalid option\n");
+
 	} else if (strcmp(argv[1], "status"))
 		c_status();
 	
-	else printf("Invalid argument count.\n");
+	else printf("Invalid command name or count.\n");
 
 	return 0;
 }
