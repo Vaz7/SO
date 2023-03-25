@@ -53,34 +53,24 @@ void c_status(){
 
 int main(int argc, char **argv){
 	
-	char string[1024]=""; //acho overkill usar uma string dinamica (que raio de comando vai usar 1000 chars?!)
 
 	if(argc == 1){
 		printf("Invalid Input");
 		return 0;
 	}
-
-	//tomas, tinhas te esquecido de verificar o numero de argumentos antes de 
-	//ir buscar o indice para comparar e dava segfault se faltassem flags
-
 	
-	if(!strcmp(argv[1], "execute") && argc >= 4){
+	if(!strcmp(argv[1], "execute") && argc == 4){
 		if(strcmp(argv[2], "-u") == 0){
-
-			for(int i=3;i<argc;i++){ //imprimir para a string o comando a executar e as flags separados por " "
-				strcat(string, argv[i]);
-    			strcat(string, " ");
-			}
-
-			string[strlen(string)-1] = '\0'; //para tirar o ultimo espaço da string
 			
-			c_exec(string);
+			c_exec(argv[3]);
 		}
 			
 		//else if(strcmp(argv[2], "-p") == 0)
 			//TODO
 	} else if (strcmp(argv[1], "status"))
 		c_status();
+	
+	else printf("Invalid argument count.\n");
 
 	return 0;
 }
