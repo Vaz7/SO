@@ -9,9 +9,9 @@
 
 void c_exec(char* cmd){
 	int pid;
-	struct timeval curT;
-
+	struct timeval curT, endT;
 	char *nome = strdup(cmd);
+	strcat(nome,"\0");
 	char* in_ptr = cmd;
 	char* o_ptr=NULL;
 	char* array[20];//o tamanho deste array é kinda sus
@@ -23,20 +23,19 @@ void c_exec(char* cmd){
 		array[index++] = o_ptr;
 	}
 
-
-	int fd = open("stats", O_WRONLY);
-	if(fd == -1){
-		perror("Failed to open FIFO\n");
-	}
-
 	gettimeofday(&curT, NULL);
 
 	if((pid = fork()) == 0){
 		pid_t pidfilho = getpid();
 
+		int fd = open("stats", O_WRONLY);
+		if(fd == -1){
+			perror("Failed to open FIFO\n");
+		}
 		write(fd, &pidfilho, sizeof(pid_t));
-		write(fd,nome,sizeof(char)*strlen(nome));
+		write(fd,nome,sizeof(char)*(strlen(nome)+1));
 		write(fd,&curT,sizeof(struct timeval)); // writes para passar para o servidor a info
+		close(fd);
 		
 		printf("Child process ID: %d\n", getpid()); // Print child process ID
 		
@@ -49,10 +48,15 @@ void c_exec(char* cmd){
 		//curT.tv_sec 
 		//handel closing of pipe writing to server
 		wait(NULL);
+		int fd = open("stats", O_WRONLY);
+		if(fd == -1){
+			perror("Failed to open FIFO\n");
+		}
 
-		gettimeofday(&curT, NULL);
+		gettimeofday(&endT, NULL);
 
-		write(fd,&curT,sizeof(struct timeval));
+		write(fd,&endT,sizeof(struct timeval));
+		close(fd);
 
 		//Open named pipe to write to server
 		//write pid and curT

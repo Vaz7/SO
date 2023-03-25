@@ -18,7 +18,7 @@ int main(int argc, char** argv){
 	read(fd, &pid, sizeof(pid_t));
 	read(fd, &nome, sizeof(nome));
 	read(fd, &startT, sizeof(struct timeval));
-	read(fd,&endT, sizeof(struct timeval));
+	read(fd, &endT, sizeof(struct timeval));
 
 	duration = (endT.tv_sec - startT.tv_sec) + (endT.tv_usec - startT.tv_usec) / 1000000.0;
 
