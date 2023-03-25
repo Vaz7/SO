@@ -17,7 +17,7 @@ int main(int argc, char** argv){
 	double duration=0;
 
 	read(fd, &pid, sizeof(pid_t));
-	read(fd, &nome,sizeof(char)*NAMESIZE);
+	read(fd, &nome,sizeof(char)*sizeof(nome));
 	read(fd, &startT, sizeof(struct timeval));
 	read(fd, &endT, sizeof(struct timeval));
 	read(fd, &pid_terminou, sizeof(pid_t));
