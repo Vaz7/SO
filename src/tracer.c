@@ -7,6 +7,8 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
+#define NAMESIZE 30
+
 
 void c_exec(char* cmd){
 	int pid;
@@ -21,7 +23,7 @@ void c_exec(char* cmd){
 		o_ptr = strsep(&in_ptr, " ");
 		array[index++] = o_ptr;
 	}
-	char nome[30];
+	char nome[NAMESIZE];
 	strcpy(nome, array[0]);
 
 	gettimeofday(&curT, NULL);
@@ -39,7 +41,8 @@ void c_exec(char* cmd){
 		
 
 		write(fd, &pidfilho, sizeof(pid_t));
-		write(fd,nome,sizeof(char)*(strlen(nome)+1));
+		nome[strlen(nome-1)]='\0';
+		write(fd,nome,sizeof(char)*NAMESIZE);
 		write(fd,&curT,sizeof(struct timeval)); // writes para passar para o servidor a info
 		
 		

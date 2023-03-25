@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#define NAMESIZE 30
 
 int main(int argc, char** argv){
 	int fd = open("stats", O_RDONLY);
@@ -11,12 +12,12 @@ int main(int argc, char** argv){
 	}
 
 	pid_t pid = 0;
-	char nome[20]="";
+	char nome[NAMESIZE]="";
 	struct timeval startT, endT;
 	double duration=0;
 
 	read(fd, &pid, sizeof(pid_t));
-	read(fd, &nome, sizeof(nome));
+	read(fd, &nome,sizeof(char)*NAMESIZE);
 	read(fd, &startT, sizeof(struct timeval));
 	read(fd, &endT, sizeof(struct timeval));
 
