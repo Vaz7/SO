@@ -10,8 +10,6 @@
 void c_exec(char* cmd){
 	int pid;
 	struct timeval curT, endT;
-	char *nome = strdup(cmd);
-	strcat(nome,"\0");
 	char* in_ptr = cmd;
 	char* o_ptr=NULL;
 	char* array[20];//o tamanho deste array é kinda sus
@@ -22,6 +20,8 @@ void c_exec(char* cmd){
 		o_ptr = strsep(&in_ptr, " ");
 		array[index++] = o_ptr;
 	}
+	char nome[30];
+	strcpy(nome, array[0]);
 
 	gettimeofday(&curT, NULL);
 
