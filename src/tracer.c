@@ -25,6 +25,7 @@ void c_exec(char* cmd){
 	}
 	char nome[NAMESIZE];
 	strcpy(nome, array[0]);
+	strcat(nome,"\0");
 
 	gettimeofday(&curT, NULL);
 
@@ -41,8 +42,7 @@ void c_exec(char* cmd){
 		
 
 		write(fd, &pidfilho, sizeof(pid_t));
-		nome[strlen(nome-1)]='\0';
-		write(fd,nome,sizeof(char)*NAMESIZE);
+		write(fd,nome,sizeof(char)*strlen(nome));
 		write(fd,&curT,sizeof(struct timeval)); // writes para passar para o servidor a info
 		
 		
@@ -63,9 +63,11 @@ void c_exec(char* cmd){
 		gettimeofday(&endT, NULL);
 
 		write(fd,&endT,sizeof(struct timeval));
+		write(fd,&pid,sizeof(pid_t));
 		
 		close(fd);
-
+		double duration = (endT.tv_sec - curT.tv_sec) + (endT.tv_usec - curT.tv_usec) / 1000000.0;
+		printf("Tempo de Execução: %f\n", duration);
 		//Open named pipe to write to server
 		//write pid and curT
 		//close pipe
