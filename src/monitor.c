@@ -10,10 +10,10 @@ int main(int argc, char** argv){
 		perror("Failed to open FIFO\n");
 	}
 
-	pid_t pid;
-	char nome[20];
+	pid_t pid = 0;
+	char nome[20]="";
 	struct timeval startT, endT;
-	double duration;
+	double duration=0;
 
 	read(fd, &pid, sizeof(pid_t));
 	read(fd, &nome, sizeof(nome));

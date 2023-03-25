@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 void c_exec(char* cmd){
 	int pid;
@@ -14,7 +15,7 @@ void c_exec(char* cmd){
 	char* o_ptr=NULL;
 	char* array[20];//o tamanho deste array é kinda sus
 	int index = 0;
-
+	int fd=0;
 	
 	while(o_ptr != NULL || index==0){
 		o_ptr = strsep(&in_ptr, " ");
@@ -25,22 +26,28 @@ void c_exec(char* cmd){
 
 	gettimeofday(&curT, NULL);
 
-	if((pid = fork()) == 0){
-		pid_t pidfilho = getpid();
-
-		int fd = open("stats", O_WRONLY);
+	//abre o pipe para escrita e leitura
+	fd = open("stats", O_RDWR);
 		if(fd == -1){
 			perror("Failed to open FIFO\n");
 		}
+
+
+	if((pid = fork()) == 0){
+		pid_t pidfilho = getpid();
+
+		
+
 		write(fd, &pidfilho, sizeof(pid_t));
 		write(fd,nome,sizeof(char)*(strlen(nome)+1));
 		write(fd,&curT,sizeof(struct timeval)); // writes para passar para o servidor a info
-		close(fd);
+		
 		
 		printf("Child process ID: %d\n", getpid()); // Print child process ID
 		
 		int ret = execvp(array[0], array);
-
+		
+		
 		perror("Failed to execute command!\n");
 		_exit(-1);// só da exit se falhar, por isso deve dar de -1
 	} else {
@@ -48,14 +55,12 @@ void c_exec(char* cmd){
 		//curT.tv_sec 
 		//handel closing of pipe writing to server
 		wait(NULL);
-		int fd = open("stats", O_WRONLY);
-		if(fd == -1){
-			perror("Failed to open FIFO\n");
-		}
+	
 
 		gettimeofday(&endT, NULL);
 
 		write(fd,&endT,sizeof(struct timeval));
+		
 		close(fd);
 
 		//Open named pipe to write to server
