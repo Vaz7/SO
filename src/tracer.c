@@ -83,12 +83,11 @@ int main(int argc, char **argv){
 		return 0;
 	}
 
-	if(mkfifo("stats", 0777) == -1){
-        if(errno != EEXIST){
-            printf("Could not create fifo file\n"); //verifica se o fifo foi criado/já estava criado, se der erro nao prossegue
-            return 1;
-        }
-    }
+	if(mkfifo("stats", 0777) == -1)
+        	if(errno != EEXIST){
+            		printf("Could not create fifo file\n"); //verifica se o fifo foi criado/já estava criado, se der erro nao prossegue
+            		return 1;
+        	}
 	
 	if(!strcmp(argv[1], "execute") && argc == 4){
 		if(strcmp(argv[2], "-u") == 0){

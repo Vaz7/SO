@@ -1,6 +1,11 @@
 #include "utils.h"
 
 int main(int argc, char** argv){
+	if(mkfifo("stats", 0777) == -1)
+		if(errno != EEXIST){
+			printf("Could not create fifo file\n");
+		}
+
 	int fd = open("stats", O_RDONLY);
 	if(fd == -1){
 		perror("Failed to open FIFO\n");
