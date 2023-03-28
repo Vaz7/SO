@@ -1,17 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/stat.h>
-#define NAMESIZE 30
-
+#include "utils.h"
 
 void c_exec(char* cmd){
-	int pid;
 	struct timeval curT, endT;
 	char* in_ptr = cmd;
 	char* o_ptr=NULL;
@@ -23,54 +12,40 @@ void c_exec(char* cmd){
 		o_ptr = strsep(&in_ptr, " ");
 		array[index++] = o_ptr;
 	}
-	char nome[NAMESIZE];
-	strcpy(nome, array[0]);
-	strcat(nome,"\0");
+
+	//Save info for server
+	ENTRY e;
+	
+	strcpy(e.cmdName, array[0]);
+	strcat(e.cmdName,"\0");
 
 	gettimeofday(&curT, NULL);
-
-	//abre o pipe para escrita e leitura
-	fd = open("stats", O_RDWR);
-		if(fd == -1){
+	
+	//abre o pipe para leitura
+	fd = open("stats", O_WRONLY);
+		if(fd == -1)
 			perror("Failed to open FIFO\n");
-		}
 
-
-	if((pid = fork()) == 0){
-		pid_t pidfilho = getpid();
-
-		
-
-		write(fd, &pidfilho, sizeof(pid_t));
-		write(fd,nome,sizeof(char)*strlen(nome));
-		write(fd,&curT,sizeof(struct timeval)); // writes para passar para o servidor a info
-		
-		
-		printf("Child process ID: %d\n", getpid()); // Print child process ID
-		
+	if((e.pid = fork()) == 0){
 		int ret = execvp(array[0], array);
-		
 		
 		perror("Failed to execute command!\n");
 		_exit(-1);// só da exit se falhar, por isso deve dar de -1
-	} else {
-		//TODO Use named pipes to send to server pid, array[0] and
-		//curT.tv_sec 
-		//handel closing of pipe writing to server
-		wait(NULL);
-	
+	} else{
+		int status;
+		wait(&status);
 
-		gettimeofday(&endT, NULL);
+		if(WEXITSTATUS(status) != -1){
 
-		write(fd,&endT,sizeof(struct timeval));
-		write(fd,&pid,sizeof(pid_t));
+			gettimeofday(&endT, NULL);
+			e.timestamp = endT.tv_sec - curT.tv_sec;
+
+			write(fd, &e, sizeof(e));
 		
+			int duration = e.timestamp * 1000;
+			printf("Exec Time: %d\n", duration);
+		}
 		close(fd);
-		double duration = (endT.tv_sec - curT.tv_sec) + (endT.tv_usec - curT.tv_usec) / 1000000.0;
-		printf("Tempo de Execução: %f\n", duration);
-		//Open named pipe to write to server
-		//write pid and curT
-		//close pipe
 	}
 }
 
