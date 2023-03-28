@@ -14,7 +14,7 @@ int main(int argc, char** argv){
 
 	duration = e.timestamp * 1000;
 
-	printf("o pid é %d, nome é %s, duracao é %f, o pid que terminou foi %d\n",e.pid,e.cmdName,duration);
+	printf("[%d] Command: %s - %d ms\n",e.pid,e.cmdName,duration);
 
 	return 0;
 }
