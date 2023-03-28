@@ -38,11 +38,11 @@ void c_exec(char* cmd){
 		if(WEXITSTATUS(status) != -1){
 
 			gettimeofday(&endT, NULL);
-			e.timestamp = endT.tv_sec - curT.tv_sec;
+			e.timestamp = endT.tv_usec - curT.tv_usec;
 
 			write(fd, &e, sizeof(e));
 		
-			int duration = e.timestamp * 1000;
+			int duration = e.timestamp / 1000;
 			printf("Exec Time: %d ms\n", duration);
 		}
 

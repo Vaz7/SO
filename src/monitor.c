@@ -17,7 +17,7 @@ int main(int argc, char** argv){
 
 	read(fd, &e, sizeof(e));
 
-	duration = e.timestamp * 1000;
+	duration = e.timestamp / 1000;
 
 	printf("[%d] Command: %s - %d ms\n",e.pid,e.cmdName,duration);
 
