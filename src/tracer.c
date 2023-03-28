@@ -43,10 +43,8 @@ void c_exec(char* cmd){
 			write(fd, &e, sizeof(e));
 		
 			int duration = e.timestamp * 1000;
-			printf("Exec Time: %d\n", duration);
+			printf("Exec Time: %d ms\n", duration);
 		}
-
-		printf("Exec Error!\n");
 
 		close(fd);
 	}
