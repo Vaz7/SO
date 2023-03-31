@@ -32,7 +32,7 @@ void c_exec(char* cmd){
 		char nl = '\n';
 		char tmp[12] = {0x0};
 
-		sprintf(tmp, "%d", e.pid);
+		sprintf(tmp, "%d", getpid());
 
 		write(1, msg, strlen(msg));
 		write(1, tmp, strlen(tmp));
