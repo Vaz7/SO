@@ -20,30 +20,42 @@ void c_exec(char* cmd){
 	strcat(e.cmdName,"\0");
 
 	gettimeofday(&curT, NULL);
+	e.timestamp = curT.tv_usec;
 	
 	//abre o pipe para leitura
 	fd = open("stats", O_WRONLY);
-		if(fd == -1)
-			perror("Failed to open FIFO\n");
+	if(fd == -1)
+		perror("Failed to open FIFO\n");
 
 	if((e.pid = fork()) == 0){
+		char* msg = "Executing on process: ";
+		char nl = '\n';
+		char tmp[12] = {0x0};
+
+		sprintf(tmp, "%d", e.pid);
+
+		write(1, msg, strlen(msg));
+		write(1, tmp, strlen(tmp));
+		write(1, &nl, sizeof(char));
+
 		int ret = execvp(array[0], array);
 		
 		perror("Failed to execute command!\n");
 		_exit(-1);// só da exit se falhar, por isso deve dar de -1
 	} else{
+		write(fd, &e, sizeof(e));
+
 		int status;
 		wait(&status);
 
 		if(WEXITSTATUS(status) != -1){
-
 			gettimeofday(&endT, NULL);
-			e.timestamp = endT.tv_usec - curT.tv_usec;
+			e.timestamp = endT.tv_usec;
 
 			write(fd, &e, sizeof(e));
 		
-			int duration = e.timestamp / 1000;
-			printf("Exec Time: %d ms\n", duration);
+			float duration = (endT.tv_usec - curT.tv_usec) / 1000.0f;
+			printf("Exec Time: %f ms\n", duration);
 		}
 
 		close(fd);

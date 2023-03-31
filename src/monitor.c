@@ -13,13 +13,15 @@ int main(int argc, char** argv){
 
 	int duration=0;
 	
-	ENTRY e;
+	ENTRY e, e_end; //Change top array of entries that are then matched after prog ends
 
 	read(fd, &e, sizeof(e));
 
-	duration = e.timestamp / 1000;
+	read(fd,&e_end, sizeof(e));
 
-	printf("[%d] Command: %s - %d ms\n",e.pid,e.cmdName,duration);
+	e_end.timestamp -= e.timestamp;
+
+	printf("[%d] Finished Command %s\n",e.pid,e.cmdName);
 
 	return 0;
 }
