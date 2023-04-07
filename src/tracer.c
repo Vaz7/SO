@@ -28,15 +28,7 @@ void c_exec(char* cmd){
 		perror("Failed to open FIFO\n");
 
 	if((e.pid = fork()) == 0){
-		char* msg = "Executing on process: ";
-		char nl = '\n';
-		char tmp[12] = {0x0};
-
-		sprintf(tmp, "%d", getpid());
-
-		write(1, msg, strlen(msg));
-		write(1, tmp, strlen(tmp));
-		write(1, &nl, sizeof(char));
+		printf("[%d] Executing command...", getpid());
 
 		int ret = execvp(array[0], array);
 		
