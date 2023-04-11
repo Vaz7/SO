@@ -22,5 +22,12 @@ bin/tracer: obj/tracer.o
 obj/tracer.o: src/tracer.c
 	gcc -Wall ${CFLAGS} -c src/tracer.c -o obj/tracer.o
 
+bin/queue: obj/queue.o
+	gcc ${CFLAGS} obj/queue.o -o bin/queue
+
+obj/tracer.o: src/queue.c
+	gcc -Wall ${CFLAGS} -c src/queue.c -o obj/queue.o
+
+
 clean:
 	rm -f obj/* tmp/* bin/{tracer,monitor}
