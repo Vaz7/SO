@@ -1,4 +1,4 @@
-CFLAGS = -g
+CFLAGS = -g -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -Iincludes
 #-o2 -g
 
 all: folders server client
@@ -21,13 +21,6 @@ bin/tracer: obj/tracer.o
 
 obj/tracer.o: src/tracer.c
 	gcc -Wall ${CFLAGS} -c src/tracer.c -o obj/tracer.o
-
-bin/queue: obj/queue.o
-	gcc ${CFLAGS} obj/queue.o -o bin/queue
-
-obj/tracer.o: src/queue.c
-	gcc -Wall ${CFLAGS} -c src/queue.c -o obj/queue.o
-
 
 clean:
 	rm -f obj/* tmp/* bin/{tracer,monitor}

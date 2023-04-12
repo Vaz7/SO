@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "queue.h"
 
 int find_e(pid_t pid, int size, ENTRY* buf){
 	for(int i = 0; i < size; i++)
@@ -27,7 +26,7 @@ void fHandler(int pipe){
 }
 
 int main(int argc, char** argv){
-
+	
 	if(mkfifo("stats", 0777) == -1)
 		if(errno != EEXIST){
 			printf("Could not create fifo file\n");
@@ -56,19 +55,17 @@ int main(int argc, char** argv){
 
 	ENTRY e_buf[20];	
 	ENTRY e; 
-	Queue *q;
-	initQueue(q);
 
 	while(1){
 		read(fd, &e, sizeof(e));
 
 		if((pos = find_e(e.pid, count, e_buf)) != -1){
-			e_buf[pos].timestamp = e.timestamp - e_buf[pos].timestamp;
+			e_buf[pos].timestamp = 200;//e.timestamp - e_buf[pos].timestamp;
 			printf("[%d] Finished Command %s\n",e.pid,e.cmdName);
 
 			write(child_pipe[1], &e_buf[pos], sizeof(ENTRY)); // TODO CHECK
 			
-			enqueue(q, pos);
+			//enqueue(q, pos);
 			//free_pos = pos;
 			//count--;		
 		} else {
@@ -80,8 +77,8 @@ int main(int argc, char** argv){
 			
 			if(count < 20)
 				e_buf[count++] = e; 
-			else
-				e_buf[dequeue(q)] = e;
+			//else
+				//e_buf[dequeue(q)] = e;
 		}
 	}
 
