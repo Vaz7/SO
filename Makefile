@@ -11,7 +11,7 @@ folders:
 	@mkdir -p src obj bin tmp
 
 bin/monitor: obj/monitor.o
-	gcc ${CFLAGS} obj/monitor.o -o bin/monitor
+	gcc ${CFLAGS} obj/monitor.o -o bin/monitor -lm -lglib-2.0
 
 obj/monitor.o: src/monitor.c
 	gcc -Wall ${CFLAGS} -c src/monitor.c -o obj/monitor.o
