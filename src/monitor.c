@@ -1,12 +1,10 @@
 #include "utils.h"
+#include <glib.h>
 
-int find_e(pid_t pid, int size, ENTRY* buf){
-	for(int i = 0; i < size; i++)
-		if(buf[i].pid == pid)
-			return i;
 
-	return -1;
-}
+// COMPILER : gcc `pkg-config --cflags glib-2.0` monitor.c `pkg-config --libs glib-2.0` 
+
+
 
 void fHandler(int pipe){
 	int fd = open("exec_stats", O_CREAT | O_APPEND | O_WRONLY, 0600);
@@ -25,8 +23,9 @@ void fHandler(int pipe){
 	_exit(0);
 }
 
+
 int main(int argc, char** argv){
-	
+
 	if(mkfifo("stats", 0777) == -1)
 		if(errno != EEXIST){
 			printf("Could not create fifo file\n");
@@ -52,33 +51,26 @@ int main(int argc, char** argv){
 	close(child_pipe[0]);
 
 	int count = 0, pos = 0, free_pos = 0;
-
+	GHashTable *process = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, NULL);
 	ENTRY e_buf[20];	
 	ENTRY e; 
 
 	while(1){
 		read(fd, &e, sizeof(e));
 
-		if((pos = find_e(e.pid, count, e_buf)) != -1){
-			e_buf[pos].timestamp = 200;//e.timestamp - e_buf[pos].timestamp;
+		if(g_hash_table_contains(process, GINT_TO_POINTER((int)e.pid)) == TRUE){
+			ENTRY *v = g_hash_table_lookup(process, GINT_TO_POINTER((int)e.pid));
+			ENTRY aux;
+			aux.timestamp = e.timestamp - v->timestamp;
+			strcpy(aux.cmdName, e.cmdName);
+			aux.pid = e.pid;
 			printf("[%d] Finished Command %s\n",e.pid,e.cmdName);
-
-			write(child_pipe[1], &e_buf[pos], sizeof(ENTRY)); // TODO CHECK
-			
-			//enqueue(q, pos);
-			//free_pos = pos;
-			//count--;		
+			write(child_pipe[1], &aux, sizeof(ENTRY)); // TODO CHECK
+			g_hash_table_remove(process, GINT_TO_POINTER((int)e.pid));
+				
 		} else {
-			if(count >= 20){
-				//TODO GROW ARRAY NEED TO ALSO COMBINE THIS WITH FREE POS?
-			}
-
 			printf("[%d] Started Executing %s\n", e.pid, e.cmdName);
-			
-			if(count < 20)
-				e_buf[count++] = e; 
-			//else
-				//e_buf[dequeue(q)] = e;
+			g_hash_table_insert(process, GINT_TO_POINTER((int)e.pid), &e);
 		}
 	}
 
