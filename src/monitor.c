@@ -2,8 +2,39 @@
 #include <glib.h>
 
 
-// COMPILER : gcc `pkg-config --cflags glib-2.0` monitor.c `pkg-config --libs glib-2.0` 
+void add_element_to_new_table(gpointer key, gpointer value, gpointer new_table) {
+    g_hash_table_insert((GHashTable *)new_table, key, value);
+}
 
+
+
+void sendStatus(GHashTable *process){
+	int fd = open("fifo2", O_WRONLY);
+	GHashTable *new_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, NULL);
+    g_hash_table_foreach(process, add_element_to_new_table, new_table);
+
+	GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, new_table);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        ENTRY *v = g_hash_table_lookup(new_table,key);
+		printf("[%d] %s", v->pid, v->cmdName);
+		struct timeval a;
+		gettimeofday(&a, NULL);
+		ENTRY e;
+		e.pid = v->pid;
+		strcpy(e.cmdName, v->cmdName);
+		e.timestamp = a.tv_usec - v->timestamp;
+		e.flag = 0;
+		write(fd, &e, sizeof(ENTRY));
+    }
+
+	ENTRY e;
+	e.flag = 1;
+	write(fd, &e, sizeof(ENTRY));
+
+	close(fd);
+}
 
 
 void fHandler(int pipe){
@@ -28,12 +59,15 @@ int main(int argc, char** argv){
 
 	if(mkfifo("stats", 0777) == -1)
 		if(errno != EEXIST){
-			printf("Could not create fifo file\n");
+			perror("Could not create fifo file");
 		}
 
-	int fd = open("stats", O_RDWR); // Needs to be RDWR or pip won't block
-					// which causes seg. fault
+	int fd = open("stats", O_RDONLY);
 	if(fd == -1){
+		perror("Failed to open FIFO\n");
+	}
+	int fd2 = open("stats", O_WRONLY);
+	if(fd2 == -1){
 		perror("Failed to open FIFO\n");
 	}
 
@@ -50,22 +84,25 @@ int main(int argc, char** argv){
 
 	close(child_pipe[0]);
 
-	int count = 0, pos = 0, free_pos = 0;
-	GHashTable *process = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, NULL);
-	ENTRY e_buf[20];	
+
+	GHashTable *process = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, NULL);	
 	ENTRY e; 
 
 	while(1){
 		read(fd, &e, sizeof(e));
 
-		if(g_hash_table_contains(process, GINT_TO_POINTER((int)e.pid)) == TRUE){
+		if(e.flag == 1){
+			sendStatus(process);
+		}
+
+		else if(g_hash_table_contains(process, GINT_TO_POINTER((int)e.pid)) == TRUE){
 			ENTRY *v = g_hash_table_lookup(process, GINT_TO_POINTER((int)e.pid));
 			ENTRY aux;
 			aux.timestamp = e.timestamp - v->timestamp;
 			strcpy(aux.cmdName, e.cmdName);
 			aux.pid = e.pid;
 			printf("[%d] Finished Command %s\n",e.pid,e.cmdName);
-			write(child_pipe[1], &aux, sizeof(ENTRY)); // TODO CHECK
+			write(child_pipe[1], &aux, sizeof(ENTRY));
 			g_hash_table_remove(process, GINT_TO_POINTER((int)e.pid));
 				
 		} else {
@@ -76,6 +113,8 @@ int main(int argc, char** argv){
 
 	close(child_pipe[1]);
 	close(fd);
+
+	g_hash_table_destroy(process);
 
 	return 0;
 }

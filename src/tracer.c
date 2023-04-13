@@ -18,6 +18,7 @@ void c_exec(char* cmd){
 	
 	strcpy(e.cmdName, array[0]);
 	strcat(e.cmdName,"\0");
+	e.flag = 0;
 
 	gettimeofday(&curT, NULL);
 	e.timestamp = curT.tv_usec;
@@ -74,9 +75,31 @@ void p_exec(char *cmd){
 }
 
 void c_status(){
-	int pipe[2];
+	int i = 1;
+	if(mkfifo("fifo2", 0777) == -1)
+		if(errno != EEXIST){
+			perror("Could not create fifo file");
+		}
 
-	//TODO
+	ENTRY e, aux;
+	e.flag = 1;
+	int fd = open("stats", O_WRONLY);
+	write(fd, &e, sizeof(ENTRY));
+	int fd2 = open("fifo2", O_RDONLY);
+	while(i == 1){
+		read(fd2, &aux, sizeof(ENTRY));
+		if(aux.flag == 1) i = 0;
+		else{
+			float duration = (aux.timestamp) / 1000.0f;
+			printf("[%d] Processing Command %s in %fms", aux.pid, aux.cmdName, duration);
+		}
+	}
+	
+
+
+	close(fd);
+	close(fd2);
+	unlink("fifo2");
 }
 
 int main(int argc, char **argv){
