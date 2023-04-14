@@ -74,7 +74,7 @@ void p_exec(char *cmd){
 	//fazer cenas 
 }
 
-void c_status(){
+void c_status(){ // falta meter para múltiplos users e verificar o timestamp?
 	int i = 1;
 	if(mkfifo("fifo2", 0777) == -1)
 		if(errno != EEXIST){
@@ -91,7 +91,7 @@ void c_status(){
 		if(aux.flag == 1) i = 0;
 		else{
 			float duration = (aux.timestamp) / 1000.0f;
-			printf("[%d] Processing Command %s in %fms", aux.pid, aux.cmdName, duration);
+			printf("[%d] Processing Command %s in %fms\n", aux.pid, aux.cmdName, duration);
 		}
 	}
 	
