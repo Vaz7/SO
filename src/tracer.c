@@ -104,6 +104,7 @@ void c_status(){
 
 int main(int argc, char **argv){
 	
+	removeEnters(argv[argc-1]);
 
 	if(argc == 1){
 		printf("Invalid Input");
@@ -129,9 +130,13 @@ int main(int argc, char **argv){
 
 		else printf("Invalid option\n");
 
-	} else if (strcmp(argv[1], "status"))
-		c_status();
-	
+		
+	} else if (!strcmp(argv[1], "status") && argc == 2){
+			printf("here\n");
+			c_status();
+	}
+		
+		
 	else printf("Invalid command name or count.\n");
 
 	return 0;

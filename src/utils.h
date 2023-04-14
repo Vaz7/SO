@@ -15,3 +15,12 @@ typedef struct Entry {
 	time_t timestamp;
 	int flag; // 0 -> c_exec | 1 -> status
 } ENTRY;
+
+void removeEnters(char *string){//remove enters xDD
+    int size = strlen(string);
+    size--;
+
+    if(string[size]=='\n'){
+    string[size]='\0';
+    }
+}
