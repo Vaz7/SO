@@ -4,7 +4,7 @@ void c_exec(char* cmd){
 	struct timeval curT, endT;
 	char* in_ptr = cmd;
 	char* o_ptr=NULL;
-	char* array[20];//o tamanho deste array é kinda sus
+	char* array[NAMESIZE];//o tamanho deste array é kinda sus
 	int index = 0;
 	int fd=0;
 	
@@ -18,7 +18,6 @@ void c_exec(char* cmd){
 	
 	strcpy(e.cmdName, array[0]);
 	strcat(e.cmdName,"\0");
-	e.flag = 0;
 
 	gettimeofday(&curT, NULL);
 	e.timestamp = curT.tv_usec;
@@ -34,10 +33,10 @@ void c_exec(char* cmd){
 		int ret = execvp(array[0], array);
 		
 		perror("Failed to execute command!\n");
-		_exit(-1);// só da exit se falhar, por isso deve dar de -1
+		_exit(ret);// só da exit se falhar, por isso deve dar de -1
 	} else{
 		write(fd, &e, sizeof(e));
-
+		
 		int status;
 		wait(&status);
 
@@ -75,31 +74,47 @@ void p_exec(char *cmd){
 }
 
 void c_status(){ // falta meter para múltiplos users e verificar o timestamp?
-	int i = 1;
-	if(mkfifo("fifo2", 0777) == -1)
+	pid_t pid = getpid();
+	char s_pid[10];
+
+	sprintf(s_pid, "%d", pid);
+
+	if(mkfifo(s_pid, 0777) == -1)
 		if(errno != EEXIST){
 			perror("Could not create fifo file");
 		}
 
-	ENTRY e, aux;
-	e.flag = 1;
+	ENTRY e;
+	struct timeval now;
+
+	e.pid = pid;
+	strcpy(e.cmdName, "status");
+	strcat(e.cmdName, "\0");
+	gettimeofday(&now, NULL);
+	e.timestamp = now.tv_usec;
+
 	int fd = open("stats", O_WRONLY);
 	write(fd, &e, sizeof(ENTRY));
-	int fd2 = open("fifo2", O_RDONLY);
-	while(i == 1){
-		read(fd2, &aux, sizeof(ENTRY));
-		if(aux.flag == 1) i = 0;
-		else{
-			float duration = (aux.timestamp) / 1000.0f;
-			printf("[%d] Processing Command %s in %fms\n", aux.pid, aux.cmdName, duration);
-		}
-	}
-	
-
-
 	close(fd);
+
+	int fd2 = open(s_pid, O_RDONLY);
+
+	gettimeofday(&now, NULL);
+
+	int size;
+	
+	read(fd2, &size, sizeof(int));
+
+	for(int i = 0; i < size; i++){
+		if(read(fd2, &e, sizeof(ENTRY)) > 0){
+			float duration = (now.tv_usec - e.timestamp) / 1000.0f;
+			printf("Pid: %d; Executing: %s; Current Duration: %f\n", e.pid, e.cmdName, duration);
+		} else 
+			perror("Problem in status read!");
+	}
+
 	close(fd2);
-	unlink("fifo2");
+	unlink(s_pid);
 }
 
 int main(int argc, char **argv){
@@ -118,24 +133,15 @@ int main(int argc, char **argv){
         	}
 	
 	if(!strcmp(argv[1], "execute") && argc == 4){
-		if(strcmp(argv[2], "-u") == 0){
-			
+		if(strcmp(argv[2], "-u") == 0)
 			c_exec(argv[3]);
-		}
 			
-		else if(strcmp(argv[2], "-p") == 0){
-
+		else if(strcmp(argv[2], "-p") == 0)
 			p_exec(argv[3]);
-		}
 
 		else printf("Invalid option\n");
-
-		
-	} else if (!strcmp(argv[1], "status") && argc == 2){
-			printf("here\n");
-			c_status();
-	}
-		
+	} else if (!strcmp(argv[1], "status") && argc == 2)
+		c_status();
 		
 	else printf("Invalid command name or count.\n");
 
