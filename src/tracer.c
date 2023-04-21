@@ -20,7 +20,7 @@ void c_exec(char* cmd){
 	strcat(e.cmdName,"\0");
 
 	gettimeofday(&curT, NULL);
-	e.timestamp = curT.tv_usec;
+	e.timestamp = curT.tv_sec;
 	
 	//abre o pipe para leitura
 	fd = open("stats", O_WRONLY);
@@ -46,8 +46,8 @@ void c_exec(char* cmd){
 
 			write(fd, &e, sizeof(e));
 		
-			float duration = (endT.tv_usec - curT.tv_usec) / 1000.0f;
-			printf("Exec Time: %f ms\n", duration);
+			float duration = (endT.tv_sec - curT.tv_sec);
+			printf("Exec Time: %.2f sec\n", duration);
 		}
 
 		close(fd);
@@ -85,32 +85,29 @@ void c_status(){ // falta meter para múltiplos users e verificar o timestamp?
 		}
 
 	ENTRY e;
-	struct timeval now;
 
 	e.pid = pid;
-	strcpy(e.cmdName, "status");
-	strcat(e.cmdName, "\0");
-	gettimeofday(&now, NULL);
-	e.timestamp = now.tv_usec;
+	strcpy(e.cmdName, "status\0");
+	e.timestamp = 0;
 
 	int fd = open("stats", O_WRONLY);
 	write(fd, &e, sizeof(ENTRY));
 	close(fd);
 
 	int fd2 = open(s_pid, O_RDONLY);
-
-	gettimeofday(&now, NULL);
-
 	int size;
 	
 	read(fd2, &size, sizeof(int));
 
 	for(int i = 0; i < size; i++){
 		if(read(fd2, &e, sizeof(ENTRY)) > 0){
-			float duration = (now.tv_usec - e.timestamp) / 1000.0f;
-			printf("Pid: %d; Executing: %s; Current Duration: %f\n", e.pid, e.cmdName, duration);
-		} else 
+			float duration = e.timestamp;
+			printf("Pid: %d; Executing: %s; Current Duration: %.2f sec\n", e.pid, e.cmdName, duration);
+		} else {
+			close(fd2);
+			unlink(s_pid);
 			perror("Problem in status read!");
+		}
 	}
 
 	close(fd2);

@@ -2,11 +2,11 @@
 
 # Function to execute the program in the background
 execute_program() {
-    ./tracer execute -u "sleep 10"
+    ./tracer status
 }
 
 # Launch 20 instances of the program in the background
-for i in {1..20}; do
+for i in {1..4}; do
     execute_program &
 done
 

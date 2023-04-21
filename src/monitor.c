@@ -14,7 +14,7 @@ void add_element_to_new_table(gpointer key, gpointer value, gpointer new_table) 
     	g_hash_table_insert((GHashTable *)new_table, key, clone);
 }
 
-void sendStatus(GHashTable *process, pid_t pid){
+void sendStatus(GHashTable *new_table, pid_t pid){
 	char s_pid[10];
 	sprintf(s_pid, "%d", pid);
 
@@ -24,15 +24,12 @@ void sendStatus(GHashTable *process, pid_t pid){
 
 	int fd = open(s_pid, O_WRONLY);
 
-	GHashTable *new_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, free);
-    	g_hash_table_foreach(process, add_element_to_new_table, new_table);
-
 	struct timeval a;
 	gettimeofday(&a, NULL);
 	GHashTableIter iter;
     	gpointer key, value;
     
-	int size = g_hash_table_size(process);
+	int size = g_hash_table_size(new_table);
 
 	write(fd, &size, sizeof(int));
 
@@ -43,8 +40,7 @@ void sendStatus(GHashTable *process, pid_t pid){
 		ENTRY e;
 		e.pid = v->pid;
 		strcpy(e.cmdName, v->cmdName);
-		e.timestamp = a.tv_usec - v->timestamp;
-		printf("Sending: %d; %s;\n", e.pid, e.cmdName);
+		e.timestamp = a.tv_sec - v->timestamp;
 		write(fd, &e, sizeof(ENTRY));
     	}
 
@@ -100,26 +96,31 @@ int main(int argc, char** argv){
 
 	close(child_pipe[0]);
 
-
-	GHashTable *process = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, free);	 
-	ENTRY *e = (ENTRY*) malloc(sizeof(struct Entry));
+	
+	GHashTable *process = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, g_free);
+	ENTRY e;
 
 	int res;
 
-	while((res = read(fd, e, sizeof(ENTRY)) > 0)){
+	while((res = read(fd, &e, sizeof(ENTRY))) > 0){
+		
+		if(!strcmp(e.cmdName, "status")){
+			printf("[%d] Asked for Status\n", e.pid);
+			GHashTable *new_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, free);
+    			g_hash_table_foreach(process, add_element_to_new_table, new_table);
 
-		if(!strcmp(e->cmdName, "status")){
-			printf("[%d] Asked for Status\n", e->pid);
 			if(fork() == 0)
-				sendStatus(process, e->pid);
+				sendStatus(new_table, e.pid);
 		}
-		else if(g_hash_table_contains(process, GINT_TO_POINTER((int)e->pid)) == TRUE){
-			printf("[%d] Finished Command %s\n", e->pid, e->cmdName);
+		else if(g_hash_table_contains(process, GINT_TO_POINTER((int)e.pid)) == TRUE){
+			printf("[%d] Finished Command %s\n", e.pid, e.cmdName);
 			write(child_pipe[1], &e, res);
-			g_hash_table_remove(process, GINT_TO_POINTER((int)e->pid));
+			g_hash_table_remove(process, GINT_TO_POINTER((int)e.pid));
 		} else {
-			printf("[%d] Started Executing %s\n", e->pid, e->cmdName);
-			g_hash_table_insert(process, GINT_TO_POINTER((int)e->pid), e);
+			ENTRY *clone = entry_clone(&e);
+
+			printf("[%d] Started Executing %s\n", e.pid, e.cmdName);
+			g_hash_table_insert(process, GINT_TO_POINTER((int)e.pid), clone);
 		}
 	}
 
