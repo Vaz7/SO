@@ -54,23 +54,169 @@ void c_exec(char* cmd){
 	}
 }
 
+
+void removeEspacos(char *str) {
+    int i, j;
+    for (i = 0, j = 0; str[i]; i++) {
+        if (str[i] != ' ') {
+            str[j++] = str[i];
+        }
+    }
+    str[j] = '\0';
+}
+
+
+char** parsePipes(char *cmd){
+    char **array = malloc(20 * sizeof(char*));
+    int i = 0;
+    char *aux;
+
+    while((aux = strsep(&cmd, "|")) != NULL){
+        if(i!=0) array[i++] = aux+1;
+        else array[i++] = aux;
+    }
+
+    array[i] = NULL;
+    return array;
+}
+
+char*** parseArgs(char** cmd){
+    char ***matriz = malloc(20 * sizeof(char**));
+    int i = 0;
+    
+    while (cmd[i] != NULL) {
+        char *str = strdup(cmd[i]);
+        char *aux;
+        int j = 0;
+        
+        matriz[i] = malloc(20 * sizeof(char*));
+        
+        while ((aux = strsep(&str, " ")) != NULL) {
+            if(strcmp(aux, "") != 0){
+				matriz[i][j++] = aux;
+				//printf("%s\n", matriz[i][j-1]);
+			}
+        }
+
+        matriz[i][j] = NULL;
+        i++;
+    }
+    matriz[i] = NULL;
+    return matriz;
+}
+
+void freeArgs(char ***args){
+	/*for (int i = 0; args[i] != NULL; i++) {
+		for (int j = 0; args[i][j] != NULL; j++) {
+			free(args[i][j]);
+		}
+	}*/ 
+	// está a faltar dar um minor free aqui
+
+	for (int i = 0; args[i] != NULL; i++) {
+		free(args[i]);
+	}
+	free(args);
+}
+
+void pipeline(char ***cmd){
+	int len = 0;
+    while (cmd[len] != NULL) {
+        len++;
+    }
+
+	int pipes[len-1][2];
+
+	for(int i = 0; i< len; i++){
+        if(i == 0){
+            pipe(pipes[i]);
+            if(fork()==0){
+                close(pipes[i][0]);
+                dup2(pipes[i][1], 1);
+                close(pipes[i][1]);
+                execvp(cmd[i][0], cmd[i]);
+            }
+            else{
+                close(pipes[i][1]);
+            }
+        }
+        else if(i == len-1){
+            if(fork()==0){
+                dup2(pipes[i-1][0],0);
+                close(pipes[i-1][0]);
+                execvp(cmd[i][0], cmd[i]);
+            }
+            else{
+                close(pipes[i-1][0]);
+            }
+        }
+        else{
+            pipe(pipes[i]);
+            if(fork()==0){
+                close(pipes[i][0]);
+                dup2(pipes[i-1][0],0);
+                close(pipes[i-1][0]);
+                dup2(pipes[i][1],1);
+                close(pipes[i][1]);
+                execvp(cmd[i][0], cmd[i]);
+            }
+            else{
+                close(pipes[i-1][0]);
+                close(pipes[i][1]);
+            }
+        }
+    }
+
+    for(int j = 0; j < len; j++){
+        wait(NULL);
+    }
+
+
+	return;
+}
+
+
 void p_exec(char *cmd){
-	char* in_ptr = cmd;
-	char* o_ptr=NULL;
-	char* array[20];//o tamanho deste array é kinda sus
-	int index = 0;
+	struct timeval curT, endT;
+	ENTRY e;
+	strcpy(e.cmdName,cmd);
 
+	char **pipes = parsePipes(cmd);
+	char ***commands = parseArgs(pipes);
+
+	int fd = open("stats", O_WRONLY);
+	if(fd == -1)
+		perror("Failed to open FIFO\n");
+
+	gettimeofday(&curT, NULL);
+	e.timestamp = curT.tv_sec;
+
+	if((e.pid = fork()) == 0){
+		printf("[%d] Executing command...\n", getpid());
+		pipeline(commands);
+	} 
+	else{
+		write(fd, &e, sizeof(e));
+
+		int status;
+		wait(&status);
+
+		if(WEXITSTATUS(status) != -1){
+			gettimeofday(&endT, NULL);
+			e.timestamp = endT.tv_usec;
+
+			write(fd, &e, sizeof(e));
+		
+			float duration = (endT.tv_sec - curT.tv_sec);
+			printf("Exec Time: %.2f sec\n", duration);
+		}
+
+		close(fd);
+	}
 	
-	while(o_ptr != NULL || index==0){
-		o_ptr = strsep(&in_ptr, " ");
-		array[index++] = o_ptr;
-	}
 
-
-	for(int i=0;i<index-1;i++){
-		printf("%s\n",array[i]);
-	}
-	//fazer cenas 
+	free(pipes);
+	freeArgs(commands);
 }
 
 void c_status(){ // falta meter para múltiplos users e verificar o timestamp?
