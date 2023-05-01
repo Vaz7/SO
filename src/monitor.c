@@ -66,6 +66,11 @@ void fHandler(int pipe){
 	_exit(0);
 }
 
+ENTRY resetENTRY(){
+	ENTRY new;
+	return new;
+}
+
 
 int main(int argc, char** argv){
 
@@ -122,6 +127,7 @@ int main(int argc, char** argv){
 			printf("[%d] Started Executing %s\n", e.pid, e.cmdName);
 			g_hash_table_insert(process, GINT_TO_POINTER((int)e.pid), clone);
 		}
+		e = resetENTRY();
 	}
 
 	close(child_pipe[1]);

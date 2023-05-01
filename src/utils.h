@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#define NAMESIZE 30
+#define NAMESIZE 70
 
 typedef struct Entry {
 	pid_t pid;

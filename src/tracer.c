@@ -205,7 +205,7 @@ void p_exec(char *cmd){
 			gettimeofday(&endT, NULL);
 			e.timestamp = endT.tv_usec;
 
-			write(fd, &e, sizeof(e));
+			write(fd, &e, sizeof(ENTRY));
 		
 			float duration = (endT.tv_sec - curT.tv_sec);
 			printf("Exec Time: %.2f sec\n", duration);
