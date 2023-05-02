@@ -40,7 +40,8 @@ void sendStatus(GHashTable *new_table, pid_t pid){
 		ENTRY e;
 		e.pid = v->pid;
 		strcpy(e.cmdName, v->cmdName);
-		e.timestamp = a.tv_sec - v->timestamp;
+		e.timestamp.tv_sec = a.tv_sec - v->timestamp.tv_sec;
+		e.timestamp.tv_usec = a.tv_usec - v->timestamp.tv_usec;
 		write(fd, &e, sizeof(ENTRY));
     	}
 
@@ -119,6 +120,7 @@ int main(int argc, char** argv){
 		}
 		else if(g_hash_table_contains(process, GINT_TO_POINTER((int)e.pid)) == TRUE){
 			printf("[%d] Finished Command %s\n", e.pid, e.cmdName);
+			//TODO CHANGE SO WE SUBTRACT CURRENT SEC BY STATING SEC AND REPLACE TIMESTAMP.TV_SEC. DO SAME FOR USEC
 			write(child_pipe[1], &e, res);
 			g_hash_table_remove(process, GINT_TO_POINTER((int)e.pid));
 		} else {

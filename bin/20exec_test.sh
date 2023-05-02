@@ -2,7 +2,7 @@
 
 # Function to execute the program in the background
 execute_program() {
-    ./bin/tracer execute -u "sleep 10"
+    ./tracer execute -u "sleep 10"
 }
 
 # Launch 20 instances of the program in the background

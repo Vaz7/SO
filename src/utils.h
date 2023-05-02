@@ -12,8 +12,9 @@
 typedef struct Entry {
 	pid_t pid;
 	char cmdName[NAMESIZE];
-	time_t timestamp;
+	struct timeval timestamp;
 } ENTRY;
+
 
 void removeEnters(char *string){//remove enters xDD
     int size = strlen(string);

@@ -20,7 +20,7 @@ void c_exec(char* cmd){
 	strcat(e.cmdName,"\0");
 
 	gettimeofday(&curT, NULL);
-	e.timestamp = curT.tv_sec;
+	e.timestamp = curT;
 	
 	//abre o pipe para leitura
 	fd = open("stats", O_WRONLY);
@@ -42,12 +42,12 @@ void c_exec(char* cmd){
 
 		if(WEXITSTATUS(status) != -1){
 			gettimeofday(&endT, NULL);
-			e.timestamp = endT.tv_usec;
+			e.timestamp = endT;
 
 			write(fd, &e, sizeof(e));
-		
-			float duration = (endT.tv_sec - curT.tv_sec);
-			printf("Exec Time: %.2f sec\n", duration);
+			
+			long int duration = (endT.tv_sec - curT.tv_sec) * 1000 + (endT.tv_usec - curT.tv_usec) / 1000;
+			printf("Exec Time: %ld ms\n", duration);
 		}
 
 		close(fd);
@@ -189,7 +189,7 @@ void p_exec(char *cmd){
 		perror("Failed to open FIFO\n");
 
 	gettimeofday(&curT, NULL);
-	e.timestamp = curT.tv_sec;
+	e.timestamp = curT;
 
 	if((e.pid = fork()) == 0){
 		printf("[%d] Executing command...\n", getpid());
@@ -203,12 +203,12 @@ void p_exec(char *cmd){
 
 		if(WEXITSTATUS(status) != -1){
 			gettimeofday(&endT, NULL);
-			e.timestamp = endT.tv_usec;
+			e.timestamp = endT;
 
 			write(fd, &e, sizeof(ENTRY));
 		
-			float duration = (endT.tv_sec - curT.tv_sec);
-			printf("Exec Time: %.2f sec\n", duration);
+			long int duration = (endT.tv_sec - curT.tv_sec) * 1000 + (endT.tv_usec - curT.tv_usec) / 1000;
+			printf("Exec Time: %ld ms\n", duration);
 		}
 
 		close(fd);
@@ -234,7 +234,8 @@ void c_status(){ // falta meter para múltiplos users e verificar o timestamp?
 
 	e.pid = pid;
 	strcpy(e.cmdName, "status\0");
-	e.timestamp = 0;
+	e.timestamp.tv_sec = 0;
+	e.timestamp.tv_usec = 0;
 
 	int fd = open("stats", O_WRONLY);
 	write(fd, &e, sizeof(ENTRY));
@@ -247,8 +248,8 @@ void c_status(){ // falta meter para múltiplos users e verificar o timestamp?
 
 	for(int i = 0; i < size; i++){
 		if(read(fd2, &e, sizeof(ENTRY)) > 0){
-			float duration = e.timestamp;
-			printf("Pid: %d; Executing: %s; Current Duration: %.2f sec\n", e.pid, e.cmdName, duration);
+			long duration = e.timestamp.tv_sec * 1000 + e.timestamp.tv_usec / 1000;
+			printf("Pid: %d; Executing: %s; Current Duration: %ld ms\n", e.pid, e.cmdName, duration);
 		} else {
 			close(fd2);
 			unlink(s_pid);
