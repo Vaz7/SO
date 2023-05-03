@@ -94,7 +94,8 @@ int main(int argc, char** argv){
 	if(pipe(child_pipe) == -1){
 		perror("Failed to create pipe to file writer!\n");
 	}	
-
+	
+	//filho vai ler o comando recebido
 	if(fork() == 0){
 		close(child_pipe[1]);
 		fHandler(child_pipe[0]);

@@ -29,7 +29,6 @@ void c_exec(char* cmd){
 
 	if((e.pid = fork()) == 0){
 		printf("[%d] Executing command...", getpid());
-
 		int ret = execvp(array[0], array);
 		
 		perror("Failed to execute command!\n");
@@ -248,7 +247,7 @@ void c_status(){ // falta meter para múltiplos users e verificar o timestamp?
 
 	for(int i = 0; i < size; i++){
 		if(read(fd2, &e, sizeof(ENTRY)) > 0){
-			long duration = e.timestamp.tv_sec * 1000 + e.timestamp.tv_usec / 1000;
+			long int duration = e.timestamp.tv_sec * 1000 + e.timestamp.tv_usec / 1000;
 			printf("Pid: %d; Executing: %s; Current Duration: %ld ms\n", e.pid, e.cmdName, duration);
 		} else {
 			close(fd2);
