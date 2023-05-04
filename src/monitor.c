@@ -50,17 +50,24 @@ void sendStatus(GHashTable *new_table, pid_t pid){
 	close(fd);
 }
 
-
-void fHandler(int pipe){
-	int fd = open("exec_stats", O_CREAT | O_APPEND | O_WRONLY, 0600);
-	if(fd == -1)
-		perror("Failed to open file exec stats!\n");
-	
+//escreve a info para os ficheiros de cada pid
+void fWriter(int pipe,char *path){
 	ENTRY e;
 	int res;
+	int fd=-1;
+	char string[64];
 
-	while((res = read(pipe, &e, sizeof(e))) > 0)
+	mkdir(path,0777);
+	
+	while((res = read(pipe, &e, sizeof(e))) > 0){
+		
+		snprintf(string,64,"%s/%d",path,e.pid);
+		fd = open(string, O_CREAT | O_APPEND | O_WRONLY, 0600);
+		if(fd == -1)
+			perror("Failed to open file exec stats!\n");
+		
 		write(fd, &e, res);
+	}
 
 	close(fd);
 	close(pipe);
@@ -95,11 +102,23 @@ int main(int argc, char** argv){
 		perror("Failed to create pipe to file writer!\n");
 	}	
 	
-	//filho vai ler o comando recebido
-	if(fork() == 0){
-		close(child_pipe[1]);
-		fHandler(child_pipe[0]);
+	if(argc==1){//se nao se passar o nome da pasta fica default
+		if(fork() == 0){
+			close(child_pipe[1]);
+			fWriter(child_pipe[0],"stats_files");
+		}
 	}
+
+	else if(argc==2){
+		if(fork() == 0){
+		close(child_pipe[1]);
+		fWriter(child_pipe[0],argv[1]);
+		}
+	}
+	else{
+		perror("Invalid command number!");
+	}
+
 
 	close(child_pipe[0]);
 
