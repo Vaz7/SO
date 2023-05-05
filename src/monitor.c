@@ -108,7 +108,7 @@ void sendStatsTime(pid_t pid,char * path){
 			
 		read(fd2,&e,sizeof(e));
 
-		duration = (e.timestamp.tv_sec*1000) + (e.timestamp.tv_usec/1000);
+		duration += (e.timestamp.tv_sec*1000) + (e.timestamp.tv_usec/1000);
 		close(fd2);
 
 		

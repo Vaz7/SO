@@ -301,8 +301,6 @@ void stats_time(int argc, char **argv){
 	printf("duration = %ld\n",duration);
 	
 	
-	
-	
 	unlink(s_pid);
 
 
