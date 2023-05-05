@@ -62,6 +62,7 @@ void fWriter(int pipe,char *path){
 	while((res = read(pipe, &e, sizeof(e))) > 0){
 		
 		snprintf(string,64,"%s/%d",path,e.pid);
+		
 		fd = open(string, O_CREAT | O_APPEND | O_WRONLY, 0600);
 		if(fd == -1)
 			perror("Failed to open file exec stats!\n");
@@ -77,6 +78,50 @@ void fWriter(int pipe,char *path){
 ENTRY resetENTRY(){
 	ENTRY new;
 	return new;
+}
+
+
+void sendStatsTime(pid_t pid,char * path){
+	char s_pid[10];
+	sprintf(s_pid, "%d", pid);
+	int res;
+	int aux;
+	long int duration=0;
+	char string[64];
+	ENTRY e;
+
+	if(mkfifo(s_pid, 0777) == -1)
+		if(errno != EEXIST)
+			perror("Could not create status fifo");
+
+	int fd = open(s_pid, O_RDONLY);
+	int fd2;
+
+	while((res = read(fd, &aux, sizeof(int))) > 0){
+		snprintf(string,64,"%s/%d",path,aux);
+		fd2 = open(string,O_RDONLY,0600);
+		
+		if(fd2 == -1){
+			duration=-1;
+			break;
+		}
+			
+		read(fd2,&e,sizeof(e));
+
+		duration = (e.timestamp.tv_sec*1000) + (e.timestamp.tv_usec/1000);
+		close(fd2);
+
+		
+	}
+
+	close(fd);
+
+	fd = open(s_pid,O_WRONLY);
+
+	write(fd,&duration,sizeof(long int));
+
+	close(fd);
+
 }
 
 
@@ -138,12 +183,34 @@ int main(int argc, char** argv){
 			if(fork() == 0)
 				sendStatus(new_table, e.pid);
 		}
+
+		else if(!strcmp(e.cmdName,"stats-time")){
+			printf("[%d] Asked for stats-time\n",e.pid);
+			if(argc==1){
+				sendStatsTime(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
+			}
+			else if(argc==2){
+				sendStatsTime(e.pid,argv[1]); //para o caso de ser o path passado por argumento
+			}	
+			
+		}
+	
+
 		else if(g_hash_table_contains(process, GINT_TO_POINTER((int)e.pid)) == TRUE){
 			printf("[%d] Finished Command %s\n", e.pid, e.cmdName);
-			//TODO CHANGE SO WE SUBTRACT CURRENT SEC BY STATING SEC AND REPLACE TIMESTAMP.TV_SEC. DO SAME FOR USEC
+			
+			struct timeval a;
+			gettimeofday(&a, NULL);
+
+			//fica já no ficheiro guardado com o tempo de duração do comando
+
+			e.timestamp.tv_sec = a.tv_sec - e.timestamp.tv_sec;
+			e.timestamp.tv_usec = a.tv_usec - e.timestamp.tv_usec;
+		
 			write(child_pipe[1], &e, res);
 			g_hash_table_remove(process, GINT_TO_POINTER((int)e.pid));
 		} else {
+
 			ENTRY *clone = entry_clone(&e);
 
 			printf("[%d] Started Executing %s\n", e.pid, e.cmdName);

@@ -41,7 +41,7 @@ void c_exec(char* cmd){
 
 		if(WEXITSTATUS(status) != -1){
 			gettimeofday(&endT, NULL);
-			e.timestamp = endT;
+
 
 			write(fd, &e, sizeof(e));
 			
@@ -260,6 +260,57 @@ void c_status(){ // falta meter para múltiplos users e verificar o timestamp?
 	unlink(s_pid);
 }
 
+void stats_time(int argc, char **argv){
+	pid_t aux;
+	pid_t pid = getpid();
+	char s_pid[10];
+	long int duration=-1;
+	sprintf(s_pid, "%d", pid);
+
+	if(mkfifo(s_pid, 0777) == -1)
+		if(errno != EEXIST){
+			perror("Could not create fifo file");
+		}
+
+	ENTRY e;
+
+	e.pid = pid;
+	strcpy(e.cmdName, "stats-time\0");
+	e.timestamp.tv_sec = 0;
+	e.timestamp.tv_usec = 0;
+
+	int fd = open("stats", O_WRONLY);//para enviar o comando para o monitor
+	write(fd, &e, sizeof(ENTRY));
+
+	int fd2 = open(s_pid,O_WRONLY);
+	
+	for(int i=2;i<argc;i++){
+		aux = atoi(argv[i]);
+		write(fd2,&aux,sizeof(int));
+	}
+
+	close(fd2);
+	close(fd);
+	
+	fd2 = open(s_pid,O_RDONLY);
+
+	read(fd2,&duration,sizeof(long int));
+	
+	close(fd2);
+
+	printf("duration = %ld\n",duration);
+	
+	
+	
+	
+	unlink(s_pid);
+
+
+
+}
+
+
+
 int main(int argc, char **argv){
 	
 	removeEnters(argv[argc-1]);
@@ -279,13 +330,29 @@ int main(int argc, char **argv){
 		if(strcmp(argv[2], "-u") == 0)
 			c_exec(argv[3]);
 			
-		else if(strcmp(argv[2], "-p") == 0)
+		else if(strcmp(argv[2], "-p") == 0){
 			p_exec(argv[3]);
-
+		}	
 		else printf("Invalid option\n");
-	} else if (!strcmp(argv[1], "status") && argc == 2)
+	}
+	
+	else if (!strcmp(argv[1], "status") && argc == 2){
 		c_status();
-		
+	}
+
+	else if(!strcmp(argv[1],"stats-time") && argc >= 3){
+		stats_time(argc,argv);
+	}
+
+	else if(!strcmp(argv[1],"stats-command") && argc >= 3){
+		printf("A fazer status command\n");
+	}
+
+	else if(!strcmp(argv[1],"stats-uniq") && argc >= 3){
+		printf("A fazer stats uniq\n");
+	}
+
+
 	else printf("Invalid command name or count.\n");
 
 	return 0;
