@@ -82,6 +82,7 @@ ENTRY resetENTRY(){
 
 
 void sendStatsTime(pid_t pid,char * path){
+	
 	char s_pid[10];
 	sprintf(s_pid, "%d", pid);
 	int res;
@@ -99,6 +100,7 @@ void sendStatsTime(pid_t pid,char * path){
 
 	while((res = read(fd, &aux, sizeof(int))) > 0){
 		snprintf(string,64,"%s/%d",path,aux);
+		
 		fd2 = open(string,O_RDONLY,0600);
 		
 		if(fd2 == -1){
@@ -107,6 +109,7 @@ void sendStatsTime(pid_t pid,char * path){
 			
 		else{
 			read(fd2,&e,sizeof(e));	
+
 			duration += (e.timestamp.tv_sec*1000) + (e.timestamp.tv_usec/1000);
 			close(fd2);
 		}
@@ -195,18 +198,16 @@ int main(int argc, char** argv){
 	
 
 		else if(g_hash_table_contains(process, GINT_TO_POINTER((int)e.pid)) == TRUE){
-			printf("[%d] Finished Command %s\n", e.pid, e.cmdName);
-			
-			struct timeval a;
-			gettimeofday(&a, NULL);
+            printf("[%d] Finished Command %s\n", e.pid, e.cmdName);
+            ENTRY *v = g_hash_table_lookup(process, GINT_TO_POINTER((int)e.pid));
 
-			//fica já no ficheiro guardado com o tempo de duração do comando
-
-			e.timestamp.tv_sec = a.tv_sec - e.timestamp.tv_sec;
-			e.timestamp.tv_usec = a.tv_usec - e.timestamp.tv_usec;
-		
-			write(child_pipe[1], &e, res);
-			g_hash_table_remove(process, GINT_TO_POINTER((int)e.pid));
+            //fica já no ficheiro guardado com o tempo de duração do comando
+            e.timestamp.tv_sec = e.timestamp.tv_sec - v->timestamp.tv_sec;
+            e.timestamp.tv_usec = e.timestamp.tv_usec - v->timestamp.tv_usec;
+            
+        
+            write(child_pipe[1], &e, sizeof(e));
+            g_hash_table_remove(process, GINT_TO_POINTER((int)e.pid));
 		} else {
 
 			ENTRY *clone = entry_clone(&e);

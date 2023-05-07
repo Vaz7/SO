@@ -34,16 +34,17 @@ void c_exec(char* cmd){
 		perror("Failed to execute command!\n");
 		_exit(ret);// só da exit se falhar, por isso deve dar de -1
 	} else{
-		write(fd, &e, sizeof(e));
-		
-		int status;
-		wait(&status);
+        write(fd, &e, sizeof(e));
+        
+        int status;
+        wait(&status);
 
-		if(WEXITSTATUS(status) != -1){
-			gettimeofday(&endT, NULL);
+        if(WEXITSTATUS(status) != -1){
+            gettimeofday(&endT, NULL);
+            e.timestamp.tv_sec = endT.tv_sec;
+            e.timestamp.tv_usec = endT.tv_usec;
 
-
-			write(fd, &e, sizeof(e));
+            write(fd, &e, sizeof(e));
 			
 			long int duration = (endT.tv_sec - curT.tv_sec) * 1000 + (endT.tv_usec - curT.tv_usec) / 1000;
 			printf("Exec Time: %ld ms\n", duration);
@@ -179,6 +180,7 @@ void p_exec(char *cmd){
 	struct timeval curT, endT;
 	ENTRY e;
 	strcpy(e.cmdName,cmd);
+	
 
 	char **pipes = parsePipes(cmd);
 	char ***commands = parseArgs(pipes);
