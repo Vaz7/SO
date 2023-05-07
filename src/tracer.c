@@ -298,7 +298,13 @@ void stats_time(int argc, char **argv){
 	
 	close(fd2);
 
-	printf("duration = %ld\n",duration);
+	if(duration == -1){
+		printf("Invalid pid numbers\n");
+	}
+	else{
+		printf("Total execution time is = %ldms\n",duration);
+	}
+		
 	
 	
 	unlink(s_pid);

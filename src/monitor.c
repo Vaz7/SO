@@ -86,7 +86,7 @@ void sendStatsTime(pid_t pid,char * path){
 	sprintf(s_pid, "%d", pid);
 	int res;
 	int aux;
-	long int duration=0;
+	long int duration=-1;
 	char string[64];
 	ENTRY e;
 
@@ -102,16 +102,14 @@ void sendStatsTime(pid_t pid,char * path){
 		fd2 = open(string,O_RDONLY,0600);
 		
 		if(fd2 == -1){
-			duration=-1;
-			break;
+			printf("Invalid pid: %d\n",aux);
 		}
 			
-		read(fd2,&e,sizeof(e));
-
-		duration += (e.timestamp.tv_sec*1000) + (e.timestamp.tv_usec/1000);
-		close(fd2);
-
-		
+		else{
+			read(fd2,&e,sizeof(e));	
+			duration += (e.timestamp.tv_sec*1000) + (e.timestamp.tv_usec/1000);
+			close(fd2);
+		}
 	}
 
 	close(fd);
