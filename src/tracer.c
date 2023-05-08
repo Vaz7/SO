@@ -374,6 +374,52 @@ void stats_command(int argc, char **argv){
 	unlink(s_pid);
 }
 
+void stats_uniq(int argc, char **argv){
+	pid_t aux;
+	pid_t pid = getpid();
+	char s_pid[10];
+	
+	sprintf(s_pid, "%d", pid);
+	char commandName[NAMESIZE];
+
+	if(mkfifo(s_pid, 0777) == -1)
+		if(errno != EEXIST){
+			perror("Could not create fifo file");
+		}
+
+	ENTRY e;
+
+	e.pid = pid;
+	strcpy(e.cmdName, "stats-uniq\0");
+	e.timestamp.tv_sec = 0;
+	e.timestamp.tv_usec = 0;
+
+	int fd = open("stats", O_WRONLY);//para enviar o comando para o monitor
+	write(fd, &e, sizeof(ENTRY));
+
+	int fd2 = open(s_pid,O_WRONLY);
+	
+	for(int i=2;i<argc;i++){
+		aux = atoi(argv[i]);
+		write(fd2,&aux,sizeof(int));
+	}
+
+	close(fd2);
+	close(fd);
+	
+	fd2 = open(s_pid,O_RDONLY);
+
+	while(read(fd2,&commandName,NAMESIZE)>0){
+		printf("%s\n",commandName);
+	}
+	
+	close(fd2);
+	
+	unlink(s_pid);
+
+}
+
+
 int main(int argc, char **argv){
 	
 	removeEnters(argv[argc-1]);
@@ -412,7 +458,7 @@ int main(int argc, char **argv){
 	}
 
 	else if(!strcmp(argv[1],"stats-uniq") && argc >= 3){
-		printf("A fazer stats uniq\n");
+		stats_uniq(argc,argv);
 	}
 
 

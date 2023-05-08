@@ -172,6 +172,62 @@ void sendStatsCommand(pid_t pid,char *path){
 	close(fd);
 }
 
+void sendStatsUniq(pid_t pid,char * path){
+	char s_pid[10];
+	sprintf(s_pid, "%d", pid);
+	int res;
+	int aux;
+	char string[64];
+	ENTRY e;
+	char *strAux;
+	GHashTable *programas = g_hash_table_new(g_str_hash, g_str_equal); //str hash (id é uma string), str_equal (compara strings)
+
+	if(mkfifo(s_pid, 0777) == -1)
+		if(errno != EEXIST)
+			perror("Could not create status fifo");
+
+	int fd = open(s_pid, O_RDONLY);
+	int fd2;
+
+	while((res = read(fd, &aux, sizeof(int))) > 0){
+		snprintf(string,64,"%s/%d",path,aux);
+		
+		fd2 = open(string,O_RDONLY,0600);
+		
+		if(fd2 == -1){
+			printf("Invalid pid: %d\n",aux);
+		}
+			
+		else{
+			read(fd2,&e,sizeof(e));	
+			
+			
+			if (!g_hash_table_contains(programas, e.cmdName)) {
+				strAux = strdup(e.cmdName);
+    			g_hash_table_insert(programas,strAux, NULL);
+			}
+		
+			close(fd2);
+		}
+	}
+
+	close(fd);
+
+	fd = open(s_pid,O_WRONLY);
+	
+
+	GHashTableIter iter;
+    gpointer key, value;
+
+    g_hash_table_iter_init (&iter, programas);//funcao que itera sobre todas as linhas da hash table
+    
+    while (g_hash_table_iter_next(&iter, &key, &value)){
+		write(fd,key,NAMESIZE);
+    }
+
+	close(fd);
+}
+
 int main(int argc, char** argv){
 
 	if(mkfifo("stats", 0777) == -1)
@@ -248,6 +304,16 @@ int main(int argc, char** argv){
 			}
 			else if(argc==2){
 				sendStatsCommand(e.pid,argv[1]); //para o caso de ser o path passado por argumento
+	
+			}
+		}
+		else if(!strcmp(e.cmdName,"stats-uniq")){
+			printf("[%d] Asked for stats-uniq\n",e.pid);
+			if(argc==1){
+				sendStatsUniq(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
+			}
+			else if(argc==2){
+				sendStatsUniq(e.pid,argv[1]); //para o caso de ser o path passado por argumento
 	
 			}
 		}
