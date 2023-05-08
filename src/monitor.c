@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <glib.h>
+#define COMMANDSIZE 1000 //tamanho do comando para o stats-command
 
 ENTRY* entry_clone(ENTRY *e){
 	ENTRY *novo = (ENTRY*) malloc(sizeof(struct Entry));
@@ -126,6 +127,51 @@ void sendStatsTime(pid_t pid,char * path){
 }
 
 
+void sendStatsCommand(pid_t pid,char *path){
+	char s_pid[10];
+	sprintf(s_pid, "%d", pid);
+	int res;
+	int aux;
+	int usage=0;
+	char string[64];
+	char comando[COMMANDSIZE];
+	ENTRY e;
+
+	if(mkfifo(s_pid, 0777) == -1)
+		if(errno != EEXIST)
+			perror("Could not create status fifo");
+
+	int fd = open(s_pid, O_RDONLY);
+	int fd2;
+	
+	read(fd,&comando,COMMANDSIZE);
+	
+	while((res = read(fd, &aux, sizeof(int))) > 0){
+		snprintf(string,64,"%s/%d",path,aux);
+		
+		fd2 = open(string,O_RDONLY,0600);
+		
+		if(fd2 == -1){
+			printf("Invalid pid: %d\n",aux);
+		}
+			
+		else{
+			read(fd2,&e,sizeof(e));	
+
+			if(!strcmp(e.cmdName,comando)) usage ++;
+			close(fd2);
+		}
+	}
+
+	close(fd);
+
+	fd = open(s_pid,O_WRONLY);
+
+	write(fd,&usage,sizeof(int));
+
+	close(fd);
+}
+
 int main(int argc, char** argv){
 
 	if(mkfifo("stats", 0777) == -1)
@@ -193,7 +239,17 @@ int main(int argc, char** argv){
 			else if(argc==2){
 				sendStatsTime(e.pid,argv[1]); //para o caso de ser o path passado por argumento
 			}	
-			
+		}
+
+		else if(!strcmp(e.cmdName,"stats-command")){
+			printf("[%d] Asked for stats-command\n",e.pid);
+			if(argc==1){
+				sendStatsCommand(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
+			}
+			else if(argc==2){
+				sendStatsCommand(e.pid,argv[1]); //para o caso de ser o path passado por argumento
+	
+			}
 		}
 	
 

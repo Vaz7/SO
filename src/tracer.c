@@ -1,4 +1,5 @@
 #include "utils.h"
+#define COMMANDSIZE 1000//tamanho do comando para o stats-command
 
 void c_exec(char* cmd){
 	struct timeval curT, endT;
@@ -178,12 +179,20 @@ void pipeline(char ***cmd){
 
 void p_exec(char *cmd){
 	struct timeval curT, endT;
-	ENTRY e;
-	strcpy(e.cmdName,cmd);
-	
+    ENTRY e;
 
-	char **pipes = parsePipes(cmd);
-	char ***commands = parseArgs(pipes);
+    char **pipes = parsePipes(cmd);
+    char ***commands = parseArgs(pipes);
+    char* allCommands = malloc(sizeof(char) * 100);
+    allCommands[0] = '\0';
+
+    for(int i = 0; commands[i] != NULL; i++){
+        strcat(allCommands, commands[i][0]);
+        if(commands[i+1] != NULL) 
+            strcat(allCommands, " | ");
+    }
+
+    strcpy(e.cmdName,allCommands);
 
 	int fd = open("stats", O_WRONLY);
 	if(fd == -1)
@@ -315,7 +324,55 @@ void stats_time(int argc, char **argv){
 
 }
 
+void stats_command(int argc, char **argv){
+		
+	char *comando = argv[2];
 
+	pid_t aux;
+	pid_t pid = getpid();
+	char s_pid[10];
+	int usage=0;
+	
+	sprintf(s_pid, "%d", pid);
+
+	if(mkfifo(s_pid, 0777) == -1)
+		if(errno != EEXIST){
+			perror("Could not create fifo file");
+		}
+
+	ENTRY e;
+
+	e.pid = pid;
+	strcpy(e.cmdName, "stats-command\0");
+	e.timestamp.tv_sec = 0;
+	e.timestamp.tv_usec = 0;
+
+	int fd = open("stats", O_WRONLY);//para enviar o comando para o monitor
+	write(fd, &e, sizeof(ENTRY));
+
+	int fd2 = open(s_pid,O_WRONLY);
+
+	write(fd2,comando,COMMANDSIZE);
+	
+	for(int i=3;i<argc;i++){
+		aux = atoi(argv[i]);
+		write(fd2,&aux,sizeof(int));
+	}
+
+	close(fd2);
+	close(fd);
+	
+	fd2 = open(s_pid,O_RDONLY);
+
+	read(fd2,&usage,sizeof(int));
+	
+	close(fd2);
+
+	printf("Program was run %d times.\n",usage);
+	
+
+	unlink(s_pid);
+}
 
 int main(int argc, char **argv){
 	
@@ -350,8 +407,8 @@ int main(int argc, char **argv){
 		stats_time(argc,argv);
 	}
 
-	else if(!strcmp(argv[1],"stats-command") && argc >= 3){
-		printf("A fazer status command\n");
+	else if(!strcmp(argv[1],"stats-command") && argc >= 4){
+		stats_command(argc,argv);
 	}
 
 	else if(!strcmp(argv[1],"stats-uniq") && argc >= 3){
