@@ -1,6 +1,5 @@
 #include "utils.h"
 #include <glib.h>
-#define COMMANDSIZE 1000 //tamanho do comando para o stats-command
 
 ENTRY* entry_clone(ENTRY *e){
 	ENTRY *novo = (ENTRY*) malloc(sizeof(struct Entry));
@@ -90,6 +89,7 @@ void sendStatsTime(pid_t pid,char * path){
 	int aux;
 	long int duration=-1;
 	char string[64];
+
 	ENTRY e;
 
 	if(mkfifo(s_pid, 0777) == -1)
@@ -100,6 +100,7 @@ void sendStatsTime(pid_t pid,char * path){
 	int fd2;
 
 	while((res = read(fd, &aux, sizeof(int))) > 0){
+
 		snprintf(string,64,"%s/%d",path,aux);
 		
 		fd2 = open(string,O_RDONLY,0600);
@@ -123,6 +124,7 @@ void sendStatsTime(pid_t pid,char * path){
 	write(fd,&duration,sizeof(long int));
 
 	close(fd);
+	_exit(0);
 
 }
 
@@ -134,7 +136,8 @@ void sendStatsCommand(pid_t pid,char *path){
 	int aux;
 	int usage=0;
 	char string[64];
-	char comando[COMMANDSIZE];
+	char comando[NAMESIZE];
+	char **comandos;
 	ENTRY e;
 
 	if(mkfifo(s_pid, 0777) == -1)
@@ -144,7 +147,7 @@ void sendStatsCommand(pid_t pid,char *path){
 	int fd = open(s_pid, O_RDONLY);
 	int fd2;
 	
-	read(fd,&comando,COMMANDSIZE);
+	read(fd,&comando,NAMESIZE);
 	
 	while((res = read(fd, &aux, sizeof(int))) > 0){
 		snprintf(string,64,"%s/%d",path,aux);
@@ -158,7 +161,11 @@ void sendStatsCommand(pid_t pid,char *path){
 		else{
 			read(fd2,&e,sizeof(e));	
 
-			if(!strcmp(e.cmdName,comando)) usage ++;
+			comandos = parsePipes(e.cmdName);
+
+			for(int i=0;comandos[i]!=NULL;i++){
+				if(!strcmp(e.cmdName,comandos[i])) usage ++;
+			}
 			close(fd2);
 		}
 	}
@@ -170,6 +177,7 @@ void sendStatsCommand(pid_t pid,char *path){
 	write(fd,&usage,sizeof(int));
 
 	close(fd);
+	_exit(0);
 }
 
 void sendStatsUniq(pid_t pid,char * path){
@@ -180,6 +188,7 @@ void sendStatsUniq(pid_t pid,char * path){
 	char string[64];
 	ENTRY e;
 	char *strAux;
+	char **comandos;
 	GHashTable *programas = g_hash_table_new(g_str_hash, g_str_equal); //str hash (id é uma string), str_equal (compara strings)
 
 	if(mkfifo(s_pid, 0777) == -1)
@@ -201,11 +210,18 @@ void sendStatsUniq(pid_t pid,char * path){
 		else{
 			read(fd2,&e,sizeof(e));	
 			
-			
-			if (!g_hash_table_contains(programas, e.cmdName)) {
-				strAux = strdup(e.cmdName);
-    			g_hash_table_insert(programas,strAux, NULL);
+			comandos = parsePipes(e.cmdName);
+
+			for(int i=0;comandos[i]!=NULL;i++){
+
+				if (!g_hash_table_contains(programas,comandos[i])){
+					strAux = strdup(comandos[i]);
+    				g_hash_table_insert(programas,strAux, NULL);
+				}
+
 			}
+			
+			
 		
 			close(fd2);
 		}
@@ -226,6 +242,7 @@ void sendStatsUniq(pid_t pid,char * path){
     }
 
 	close(fd);
+	_exit(0);
 }
 
 int main(int argc, char** argv){
@@ -277,8 +294,12 @@ int main(int argc, char** argv){
 	int res;
 
 	while((res = read(fd, &e, sizeof(ENTRY))) > 0){
+		if(!strcmp(e.cmdName,"abort")){
+			printf("aborting...\n");
+			break;
+		}
 		
-		if(!strcmp(e.cmdName, "status")){
+		else if(!strcmp(e.cmdName, "status")){
 			printf("[%d] Asked for Status\n", e.pid);
 			GHashTable *new_table = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, free);
     			g_hash_table_foreach(process, add_element_to_new_table, new_table);
@@ -289,32 +310,41 @@ int main(int argc, char** argv){
 
 		else if(!strcmp(e.cmdName,"stats-time")){
 			printf("[%d] Asked for stats-time\n",e.pid);
-			if(argc==1){
-				sendStatsTime(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
+			
+			if(fork() == 0){
+				if(argc==1){
+					sendStatsTime(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
+				}
+				else if(argc==2){
+					sendStatsTime(e.pid,argv[1]); //para o caso de ser o path passado por argumento
+				}	
 			}
-			else if(argc==2){
-				sendStatsTime(e.pid,argv[1]); //para o caso de ser o path passado por argumento
-			}	
 		}
 
 		else if(!strcmp(e.cmdName,"stats-command")){
 			printf("[%d] Asked for stats-command\n",e.pid);
-			if(argc==1){
-				sendStatsCommand(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
-			}
-			else if(argc==2){
-				sendStatsCommand(e.pid,argv[1]); //para o caso de ser o path passado por argumento
-	
+			
+			if(fork()==0){
+				if(argc==1){
+					sendStatsCommand(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
+				}
+				
+				else if(argc==2){
+					sendStatsCommand(e.pid,argv[1]); //para o caso de ser o path passado por argumento
+				}
 			}
 		}
 		else if(!strcmp(e.cmdName,"stats-uniq")){
 			printf("[%d] Asked for stats-uniq\n",e.pid);
-			if(argc==1){
-				sendStatsUniq(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
-			}
-			else if(argc==2){
-				sendStatsUniq(e.pid,argv[1]); //para o caso de ser o path passado por argumento
-	
+
+			if(fork()==0){
+			
+				if(argc==1){
+					sendStatsUniq(e.pid,"stats_files"); //para o caso de ser o path default para os ficheiros
+				}
+				else if(argc==2){
+					sendStatsUniq(e.pid,argv[1]); //para o caso de ser o path passado por argumento
+				}
 			}
 		}
 	

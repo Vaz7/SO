@@ -1,5 +1,5 @@
 #include "utils.h"
-#define COMMANDSIZE 1000//tamanho do comando para o stats-command
+
 
 void c_exec(char* cmd){
 	struct timeval curT, endT;
@@ -66,20 +66,6 @@ void removeEspacos(char *str) {
     str[j] = '\0';
 }
 
-
-char** parsePipes(char *cmd){
-    char **array = malloc(20 * sizeof(char*));
-    int i = 0;
-    char *aux;
-
-    while((aux = strsep(&cmd, "|")) != NULL){
-        if(i!=0) array[i++] = aux+1;
-        else array[i++] = aux;
-    }
-
-    array[i] = NULL;
-    return array;
-}
 
 char*** parseArgs(char** cmd){
     char ***matriz = malloc(20 * sizeof(char**));
@@ -352,7 +338,7 @@ void stats_command(int argc, char **argv){
 
 	int fd2 = open(s_pid,O_WRONLY);
 
-	write(fd2,comando,COMMANDSIZE);
+	write(fd2,comando,NAMESIZE);
 	
 	for(int i=3;i<argc;i++){
 		aux = atoi(argv[i]);
@@ -419,6 +405,30 @@ void stats_uniq(int argc, char **argv){
 
 }
 
+void monitorAbort(){
+	pid_t pid = getpid();
+	char s_pid[10];
+
+	sprintf(s_pid, "%d", pid);
+
+	if(mkfifo(s_pid, 0777) == -1)
+		if(errno != EEXIST){
+			perror("Could not create fifo file");
+		}
+
+	ENTRY e;
+
+	e.pid = pid;
+	strcpy(e.cmdName, "abort\0");
+	e.timestamp.tv_sec = 0;
+	e.timestamp.tv_usec = 0;
+
+	int fd = open("stats", O_WRONLY);
+	write(fd, &e, sizeof(ENTRY));
+	close(fd);
+	unlink(s_pid);
+}
+
 
 int main(int argc, char **argv){
 	
@@ -447,6 +457,10 @@ int main(int argc, char **argv){
 	
 	else if (!strcmp(argv[1], "status") && argc == 2){
 		c_status();
+	}
+
+	else if(!strcmp(argv[1], "abort") && argc == 2){
+		monitorAbort();
 	}
 
 	else if(!strcmp(argv[1],"stats-time") && argc >= 3){

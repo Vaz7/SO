@@ -24,3 +24,18 @@ void removeEnters(char *string){//remove enters xDD
     string[size]='\0';
     }
 }
+
+
+char** parsePipes(char *cmd){
+    char **array = malloc(20 * sizeof(char*));
+    int i = 0;
+    char *aux;
+
+    while((aux = strsep(&cmd, "|")) != NULL){
+        if(i!=0) array[i++] = aux+1;
+        else array[i++] = aux;
+    }
+
+    array[i] = NULL;
+    return array;
+}
