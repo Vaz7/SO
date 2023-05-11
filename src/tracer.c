@@ -407,14 +407,6 @@ void stats_uniq(int argc, char **argv){
 
 void monitorAbort(){
 	pid_t pid = getpid();
-	char s_pid[10];
-
-	sprintf(s_pid, "%d", pid);
-
-	if(mkfifo(s_pid, 0777) == -1)
-		if(errno != EEXIST){
-			perror("Could not create fifo file");
-		}
 
 	ENTRY e;
 
@@ -426,7 +418,6 @@ void monitorAbort(){
 	int fd = open("stats", O_WRONLY);
 	write(fd, &e, sizeof(ENTRY));
 	close(fd);
-	unlink(s_pid);
 }
 
 
