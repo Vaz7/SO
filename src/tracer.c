@@ -184,7 +184,7 @@ int pipeline(char ***cmd){
 
 void p_exec(char *cmd){
 	struct timeval curT, endT;
-	int ret;
+	int ret=0;
     ENTRY e;
 
     char **pipes = parsePipes(cmd);
