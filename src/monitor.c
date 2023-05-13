@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <glib.h>
+#include <stdbool.h>
 
 ENTRY* entry_clone(ENTRY *e){
 	ENTRY *novo = (ENTRY*) malloc(sizeof(struct Entry));
@@ -292,11 +293,13 @@ int main(int argc, char** argv){
 	ENTRY e;
 
 	int res;
+	bool flag = true;
+	bool abort = false;
 
-	while((res = read(fd, &e, sizeof(ENTRY))) > 0){
+	while(flag && ((res = read(fd, &e, sizeof(ENTRY))) > 0)){
 		if(!strcmp(e.cmdName,"abort")){
 			printf("aborting...\n");
-			break;
+			abort = true;
 		}
 		
 		else if(!strcmp(e.cmdName, "status")){
@@ -368,6 +371,9 @@ int main(int argc, char** argv){
 			g_hash_table_insert(process, GINT_TO_POINTER((int)e.pid), clone);
 		}
 		e = resetENTRY();
+		if(g_hash_table_size(process) == 0 && abort == true){
+			flag = false;
+		}
 	}
 
 	close(child_pipe[1]);

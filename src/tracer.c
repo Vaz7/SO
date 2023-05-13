@@ -33,14 +33,14 @@ void c_exec(char* cmd){
 		int ret = execvp(array[0], array);
 		
 		perror("Failed to execute command!\n");
-		_exit(ret);// só da exit se falhar, por isso deve dar de -1
+		_exit(-1);// só da exit se falhar, por isso deve dar de -1
 	} else{
         write(fd, &e, sizeof(e));
         
         int status;
         wait(&status);
 
-        if(WEXITSTATUS(status) != -1){
+        if(WEXITSTATUS(status) != 255){
             gettimeofday(&endT, NULL);
             e.timestamp.tv_sec = endT.tv_sec;
             e.timestamp.tv_usec = endT.tv_usec;
@@ -49,6 +49,9 @@ void c_exec(char* cmd){
 			
 			long int duration = (endT.tv_sec - curT.tv_sec) * 1000 + (endT.tv_usec - curT.tv_usec) / 1000;
 			printf("Exec Time: %ld ms\n", duration);
+		}
+		else{
+			write(fd, &e, sizeof(e));
 		}
 
 		close(fd);
@@ -106,14 +109,14 @@ void freeArgs(char ***args){
 	free(args);
 }
 
-void pipeline(char ***cmd){
+int pipeline(char ***cmd){
 	int len = 0;
     while (cmd[len] != NULL) {
         len++;
     }
 
 	int pipes[len-1][2];
-
+	int status;
 	for(int i = 0; i< len; i++){
         if(i == 0){
             pipe(pipes[i]);
@@ -122,9 +125,15 @@ void pipeline(char ***cmd){
                 dup2(pipes[i][1], 1);
                 close(pipes[i][1]);
                 execvp(cmd[i][0], cmd[i]);
+				perror("Failed to Execute Command!");
+				_exit(-1);
             }
             else{
                 close(pipes[i][1]);
+				wait(&status);
+				if(WEXITSTATUS(status) == 255){
+					return 1;
+				}
             }
         }
         else if(i == len-1){
@@ -132,9 +141,14 @@ void pipeline(char ***cmd){
                 dup2(pipes[i-1][0],0);
                 close(pipes[i-1][0]);
                 execvp(cmd[i][0], cmd[i]);
+				perror("Failed to Execute Command!");
+				_exit(-1);
             }
             else{
                 close(pipes[i-1][0]);
+				if(WEXITSTATUS(status) == 255){
+					return 1;
+				}
             }
         }
         else{
@@ -146,12 +160,18 @@ void pipeline(char ***cmd){
                 dup2(pipes[i][1],1);
                 close(pipes[i][1]);
                 execvp(cmd[i][0], cmd[i]);
+				perror("Failed to Execute Command!");
+				_exit(-1);
             }
             else{
                 close(pipes[i-1][0]);
                 close(pipes[i][1]);
+				if(WEXITSTATUS(status) == 255){
+					return 1;
+				}
             }
         }
+		return 0;
     }
 
     for(int j = 0; j < len; j++){
@@ -165,6 +185,7 @@ void pipeline(char ***cmd){
 
 void p_exec(char *cmd){
 	struct timeval curT, endT;
+	int ret;
     ENTRY e;
 
     char **pipes = parsePipes(cmd);
@@ -189,7 +210,7 @@ void p_exec(char *cmd){
 
 	if((e.pid = fork()) == 0){
 		printf("[%d] Executing command...\n", getpid());
-		pipeline(commands);
+		ret = pipeline(commands);
 	} 
 	else{
 		write(fd, &e, sizeof(e));
@@ -197,7 +218,7 @@ void p_exec(char *cmd){
 		int status;
 		wait(&status);
 
-		if(WEXITSTATUS(status) != -1){
+		if(ret == 1){
 			gettimeofday(&endT, NULL);
 			e.timestamp = endT;
 
@@ -205,6 +226,9 @@ void p_exec(char *cmd){
 		
 			long int duration = (endT.tv_sec - curT.tv_sec) * 1000 + (endT.tv_usec - curT.tv_usec) / 1000;
 			printf("Exec Time: %ld ms\n", duration);
+		}
+		else{
+			write(fd, &e, sizeof(e));
 		}
 
 		close(fd);
