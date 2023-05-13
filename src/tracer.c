@@ -171,7 +171,6 @@ int pipeline(char ***cmd){
 				}
             }
         }
-		return 0;
     }
 
     for(int j = 0; j < len; j++){
@@ -179,7 +178,7 @@ int pipeline(char ***cmd){
     }
 
 
-	return;
+	return 0;
 }
 
 
