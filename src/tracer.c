@@ -178,13 +178,12 @@ int pipeline(char ***cmd){
     }
 
 
-	return 0;
+	_exit(0);
 }
 
 
 void p_exec(char *cmd){
 	struct timeval curT, endT;
-	int ret=0;
     ENTRY e;
 
     char **pipes = parsePipes(cmd);
@@ -209,7 +208,7 @@ void p_exec(char *cmd){
 
 	if((e.pid = fork()) == 0){
 		printf("[%d] Executing command...\n", getpid());
-		ret = pipeline(commands);
+		pipeline(commands);
 	} 
 	else{
 		write(fd, &e, sizeof(e));
@@ -217,7 +216,7 @@ void p_exec(char *cmd){
 		int status;
 		wait(&status);
 
-		if(ret == 1){
+		if(WEXITSTATUS(status) == 0){
 			gettimeofday(&endT, NULL);
 			e.timestamp = endT;
 
